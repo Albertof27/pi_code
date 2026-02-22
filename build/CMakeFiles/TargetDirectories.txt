@@ -1,0 +1,7 @@
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/sensor_ble_server.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/edit_cache.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/rebuild_cache.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/list_install_components.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/install.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/install/local.dir
+/home/alberto27/Documents/sensor_ble_server/build/CMakeFiles/install/strip.dir
