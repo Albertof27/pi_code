@@ -1,6 +1,7 @@
 #ifndef SENSOR_DATA_HPP
 #define SENSOR_DATA_HPP
 
+#include <cstring>
 #include <cstdint>
 #include <vector>
 #include <mutex>
@@ -34,6 +35,23 @@ public:
     // Get binary formatted data for BLE (Little Endian)
     std::vector<uint8_t> getWeightDataBinary();
     std::vector<uint8_t> getEventsDataBinary();
+    // --- ADDED FOR GPS/BEARING ---
+    // This returns the calculated angle in binary for your app
+    std::vector<uint8_t> getBearingDataBinary();
+    /*
+    std::vector<uint8_t> getBearingDataBinary(){
+        float bearing = calculateBearing(); // Assuming this is your math function
+        std::vector<uint8_t> bytes(4);
+        std::memcpy(bytes.data(), &bearing, 4);
+        return bytes;
+    }
+        */
+
+    // These allow the Python Bluetooth script and GPS module to update locations
+    void updatePiLocation(); 
+    void updateUserLocation(float phoneLat, float phoneLon);
+
+    void setPiLocation(float lat, float lon);
     
     // Manual control for testing
     void setWeight(float weight);
@@ -44,12 +62,17 @@ public:
     bool isRunning() const { return running_; }
     
 private:
+    float calculateBearing();
     void generateDummyData();
     uint64_t getCurrentTimestamp();
     void updateEventFlags();
     
     WeightData weightData_;
     EventsData eventsData_;
+    // --- ADDED FOR GPS/BEARING ---
+    float piLat_, piLon_;      // The Pi's current coordinates
+    float userLat_, userLon_;  // The User's (Phone) coordinates
+    float bearingToUser_;      // The final calculated angle (0-360)
     
     std::mutex dataMutex_;
     std::atomic<bool> running_;

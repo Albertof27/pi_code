@@ -24,6 +24,15 @@ SERVICE_UUID = '3f09d95b-7f10-4c6a-8f0d-15a74be2b9b5'
 WEIGHT_CHAR_UUID = 'a18f1f42-1f7d-4f62-9b9c-57e76a4c3140'
 EVENTS_CHAR_UUID = 'b3a1f6d4-37db-4e7c-a7ac-b3e74c3f8e6a'
 DEVICE_NAME = 'Rover-01'
+BEARING_CHAR_UUID = 'd4a2f8e1-5b7c-4a3d-9e2f-1b8c4d3e2a1b' # Use a unique one
+GPS_WRITE_CHAR_UUID = 'e5b3c9f2-6d8e-4f1a-8c2d-2b9a1c3d4e5f' # For phone to Pi
+UDP_IP = "127.0.0.1"
+UDP_PORT = 5005
+
+MOTOR_CONTROL_CHAR_UUID = 'c7d8e9f0-1a2b-3c4d-5e6f-7a8b9c0d1e2f' # Make sure Flutter uses this!
+UDP_IP = "127.0.0.1"
+UDP_PORT = 5005
+UDP_MOTOR_PORT = 5006
 
 # ============================================
 # BlueZ D-Bus Constants
@@ -44,9 +53,10 @@ class SensorData:
     def __init__(self):
         self.weight_bytes = [0x00, 0x00, 0x00, 0x00]  # 4 bytes (float)
         self.events_bytes = [0x00, 0x00]              # 2 bytes (uint16)
+        self.bearing_bytes = [0x00, 0x00, 0x00, 0x00]
         self.lock = threading.Lock()
     
-    def update_from_hex(self, weight_hex, events_hex):
+    def update_from_hex(self, weight_hex, events_hex, bearing_hex):
         """Update from hex strings received from C++"""
         with self.lock:
             # Parse weight bytes (4 bytes)
@@ -61,6 +71,12 @@ class SensorData:
                 int(events_hex[0:2], 16),
                 int(events_hex[2:4], 16)
             ]
+            if bearing_hex and len(bearing_hex) == 8:
+                self.bearing_bytes = [int(bearing_hex[i:i+2], 16) for i in range(0, 8, 2)]
+
+    def get_bearing_bytes(self):
+        with self.lock:
+            return self.bearing_bytes.copy()
     
     def get_weight_bytes(self):
         with self.lock:
@@ -127,23 +143,27 @@ def socket_reader_thread():
         time.sleep(3)
 
 def parse_sensor_line(line):
-    """Parse data line from C++: W:0000803F,E:0000"""
-    global weight_characteristic, events_characteristic
+    """Parse data line from C++: W:0000803F,E:0000,B:XXXXXXXX"""
+    global weight_characteristic, events_characteristic, bearing_characteristic
     
     try:
         # Parse format: "W:XXXXXXXX,E:XXXX"
         parts = line.split(',')
         weight_hex = None
         events_hex = None
-        
+        bearing_hex = None
+
         for part in parts:
             if part.startswith('W:'):
                 weight_hex = part[2:]
             elif part.startswith('E:'):
                 events_hex = part[2:]
+            elif part.startswith('B:'): 
+                bearing_hex = part[2:]
         
-        if weight_hex and events_hex and len(weight_hex) == 8 and len(events_hex) == 4:
-            sensor_data.update_from_hex(weight_hex, events_hex)
+        if (weight_hex and events_hex and len(weight_hex) == 8 and len(events_hex) == 4 and \
+            (bearing_hex is None or len(bearing_hex) == 8)):
+            sensor_data.update_from_hex(weight_hex, events_hex, bearing_hex)
             
             # Schedule notifications on main thread
             GLib.idle_add(send_notifications)
@@ -155,7 +175,7 @@ def parse_sensor_line(line):
 
 def send_notifications():
     """Send BLE notifications (called from main GLib thread)"""
-    global weight_characteristic, events_characteristic
+    global weight_characteristic, events_characteristic, bearing_characteristic
     
     try:
         if weight_characteristic and weight_characteristic.notifying:
@@ -163,6 +183,9 @@ def send_notifications():
         
         if events_characteristic and events_characteristic.notifying:
             events_characteristic.send_notification()
+
+        if bearing_characteristic and bearing_characteristic.notifying:
+            bearing_characteristic.send_notification()
     except Exception as e:
         print(f'[Notify] Error: {e}')
     
@@ -408,13 +431,21 @@ class RoverService(Service):
         Service.__init__(self, bus, index, SERVICE_UUID, True)
         
         # Create characteristics
-        global weight_characteristic, events_characteristic
+        global weight_characteristic, events_characteristic, bearing_characteristic
         
         weight_characteristic = WeightCharacteristic(bus, 0, self)
         events_characteristic = EventsCharacteristic(bus, 1, self)
+        bearing_characteristic = BearingCharacteristic(bus, 2, self)
+        gps_write_characteristic = GPSWriteCharacteristic(bus, 3, self)
+
+        motor_control_characteristic = MotorControlCharacteristic(bus, 4, self)
         
         self.add_characteristic(weight_characteristic)
         self.add_characteristic(events_characteristic)
+        self.add_characteristic(bearing_characteristic)     
+        self.add_characteristic(gps_write_characteristic)
+
+        self.add_characteristic(motor_control_characteristic)
         
         print(f'[Service] Created Rover service: {SERVICE_UUID}')
 
@@ -497,6 +528,104 @@ class EventsCharacteristic(Characteristic):
             [])
         
         print(f'[Events] Notification: 0x{events:04X}')
+
+
+
+
+
+# ============================================
+# Bearing Characteristic Implementation
+# ============================================
+class BearingCharacteristic(Characteristic):
+    def __init__(self, bus, index, service):
+        Characteristic.__init__(
+            self, bus, index,
+            BEARING_CHAR_UUID,
+            ['read', 'notify'],
+            service)
+        self.add_descriptor(CharacteristicUserDescriptionDescriptor(bus, 2, self, 'Bearing (deg)'))
+
+    def ReadValue(self, options):
+        value = sensor_data.get_bearing_bytes()
+        return dbus.Array(value, signature='y')
+
+    def send_notification(self):
+        if not self.notifying:
+            return
+        value = sensor_data.get_bearing_bytes()
+        self.PropertiesChanged(
+            GATT_CHRC_IFACE,
+            {'Value': dbus.Array(value, signature='y')},
+            [])
+
+# ============================================
+# GPS Write Characteristic Implementation
+# ============================================
+class GPSWriteCharacteristic(Characteristic):
+    def __init__(self, bus, index, service):
+        Characteristic.__init__(
+            self, bus, index,
+            GPS_WRITE_CHAR_UUID,
+            ['write', 'write-without-response'],
+            service)
+        self.add_descriptor(CharacteristicUserDescriptionDescriptor(bus, 3, self, 'Phone GPS Input'))
+        # Socket for sending to C++
+        self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def WriteValue(self, value, options):
+        try:
+            raw_bytes = bytes(value)
+
+            if len(raw_bytes) != 8:
+                print(f"[GPS Write] Expected 8 bytes, got {len(raw_bytes)}")
+                return
+            lat, lon = struct.unpack('<ff', raw_bytes)
+            print(f"[GPS Write] Received from Phone: Lat={lat:.6f}, Lon={lon:.6f}")
+            # Convert dbus array of bytes to string
+            gps_str = f"{lat:.6f},{lon:.6f}"
+            #gps_str = "".join([chr(b) for b in value])
+            # Send to C++ via UDP port 5005
+            self.udp_sock.sendto(gps_str.encode(), (UDP_IP, UDP_PORT))
+        except Exception as e:
+            print(f'[GPS Write] Error: {e}')
+
+
+
+
+
+
+# ============================================
+# Motor Control Characteristic Implementation
+# ============================================
+class MotorControlCharacteristic(Characteristic):
+    def __init__(self, bus, index, service):
+        Characteristic.__init__(
+            self, bus, index,
+            MOTOR_CONTROL_CHAR_UUID,
+            ['write', 'write-without-response'],
+            service)
+        self.add_descriptor(CharacteristicUserDescriptionDescriptor(bus, index, self, 'D-Pad Motor Control'))
+        
+        # Socket for sending to C++
+        self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def WriteValue(self, value, options):
+        try:
+            # Convert dbus array of bytes to a standard string
+            raw_bytes = bytes(value)
+            command_str = raw_bytes.decode('utf-8').strip()
+            
+            print(f"[Motor Control] Received command from phone: {command_str}")
+            
+            # Send to C++ via UDP port 5006
+            self.udp_sock.sendto(command_str.encode(), (UDP_IP, UDP_MOTOR_PORT))
+            
+        except Exception as e:
+            print(f'[Motor Control] Error: {e}')
+
+
+
+
 
 # ============================================
 # Characteristic User Description Descriptor

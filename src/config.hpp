@@ -23,6 +23,14 @@ namespace Config {
   
     constexpr int WEIGHT_UPDATE_INTERVAL_MS = 1000;  // Send weight every 1 second
     constexpr int EVENTS_UPDATE_INTERVAL_MS = 2000;  // Send events every 2 seconds
+
+    // The MAX-M10S defaults to 10Hz (100ms) 
+    constexpr int GPS_UPDATE_INTERVAL_MS = 100; 
+
+    // 3. ADD THIS: Networking for Python Bridge
+    constexpr int UDP_PORT = 5005;
+
+    static constexpr int UDP_MOTOR_PORT = 5006;
     
    
     // Dummy Weight Data Configuration
@@ -40,6 +48,8 @@ namespace Config {
     constexpr uint16_t EVENT_OUT_OF_RANGE = 0x0002;  // Bit 1: Out of range
     constexpr uint16_t EVENT_LOW_BATTERY = 0x0004;   // Bit 2: Low battery (future)
     constexpr uint16_t EVENT_ERROR = 0x0008;         // Bit 3: Error (future)
+    // The MAX-M10S supports dynamics up to 4g and altitudes up to 80,000m [cite: 54]
+    constexpr float MAX_G_FORCE = 4.0f;
 }
 
 #endif // CONFIG_HPP

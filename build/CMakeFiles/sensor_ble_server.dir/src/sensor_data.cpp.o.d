@@ -2,7 +2,7 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /home/alberto27/Documents/sensor_ble_server/src/sensor_data.cpp \
  /usr/include/stdc-predef.h \
  /home/alberto27/Documents/sensor_ble_server/src/sensor_data.hpp \
- /usr/include/c++/14/cstdint \
+ /usr/include/c++/14/cstring /usr/include/c++/14/bits/version.h \
  /usr/include/aarch64-linux-gnu/c++/14/bits/c++config.h \
  /usr/include/aarch64-linux-gnu/c++/14/bits/os_defines.h \
  /usr/include/features.h /usr/include/features-time64.h \
@@ -13,9 +13,13 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /usr/include/aarch64-linux-gnu/gnu/stubs.h \
  /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
  /usr/include/aarch64-linux-gnu/c++/14/bits/cpu_defines.h \
- /usr/include/c++/14/pstl/pstl_config.h \
- /usr/lib/gcc/aarch64-linux-gnu/14/include/stdint.h /usr/include/stdint.h \
+ /usr/include/c++/14/pstl/pstl_config.h /usr/include/string.h \
  /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stddef.h \
+ /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
+ /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h \
+ /usr/include/strings.h /usr/include/c++/14/cstdint \
+ /usr/lib/gcc/aarch64-linux-gnu/14/include/stdint.h /usr/include/stdint.h \
  /usr/include/aarch64-linux-gnu/bits/types.h \
  /usr/include/aarch64-linux-gnu/bits/typesizes.h \
  /usr/include/aarch64-linux-gnu/bits/time64.h \
@@ -28,7 +32,7 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /usr/include/c++/14/bits/functexcept.h \
  /usr/include/c++/14/bits/exception_defines.h \
  /usr/include/c++/14/bits/cpp_type_traits.h \
- /usr/include/c++/14/bits/version.h /usr/include/c++/14/ext/type_traits.h \
+ /usr/include/c++/14/ext/type_traits.h \
  /usr/include/c++/14/ext/numeric_traits.h \
  /usr/include/c++/14/bits/stl_pair.h /usr/include/c++/14/type_traits \
  /usr/include/c++/14/bits/move.h /usr/include/c++/14/bits/utility.h \
@@ -59,7 +63,6 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /usr/include/c++/14/bits/range_access.h \
  /usr/include/c++/14/bits/vector.tcc \
  /usr/include/c++/14/bits/memory_resource.h /usr/include/c++/14/cstddef \
- /usr/lib/gcc/aarch64-linux-gnu/14/include/stddef.h \
  /usr/include/c++/14/bits/uses_allocator.h \
  /usr/include/c++/14/bits/uses_allocator_args.h /usr/include/c++/14/tuple \
  /usr/include/c++/14/mutex /usr/include/errno.h \
@@ -81,8 +84,6 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/timer_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
- /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
- /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h \
  /usr/include/c++/14/bits/parse_numbers.h \
  /usr/include/c++/14/bits/std_mutex.h \
  /usr/include/aarch64-linux-gnu/c++/14/bits/gthr.h \
@@ -129,9 +130,8 @@ CMakeFiles/sensor_ble_server.dir/src/sensor_data.cpp.o: \
  /usr/include/c++/14/bits/unique_ptr.h \
  /usr/include/c++/14/bits/this_thread_sleep.h \
  /home/alberto27/Documents/sensor_ble_server/src/config.hpp \
- /usr/include/c++/14/chrono /usr/include/c++/14/cstring \
- /usr/include/string.h /usr/include/strings.h /usr/include/c++/14/cmath \
- /usr/include/math.h /usr/include/aarch64-linux-gnu/bits/math-vector.h \
+ /usr/include/c++/14/chrono /usr/include/c++/14/cmath /usr/include/math.h \
+ /usr/include/aarch64-linux-gnu/bits/math-vector.h \
  /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h \
  /usr/include/aarch64-linux-gnu/bits/flt-eval-method.h \
  /usr/include/aarch64-linux-gnu/bits/fp-logb.h \

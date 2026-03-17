@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
-
+#include <netinet/in.h>
 #include "config.hpp"
 #include "sensor_data.hpp"
 
@@ -71,6 +71,96 @@ std::string eventFlagsToString(uint16_t flags) {
     
     return result;
 }
+
+///////////////////////////////////////////////////////////////////////////
+// Inside your main function or a dedicated thread:
+void gpsListener(SensorDataManager& manager) {
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if (sockfd < 0) return;
+
+    // Set a timeout so the thread doesn't get stuck during shutdown
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+
+    sockaddr_in servaddr{};
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+    servaddr.sin_port = htons(Config::UDP_PORT);
+
+    bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+
+    char buffer[1024];
+    while (g_running) {
+        int n = recvfrom(sockfd, buffer, 1023, 0, nullptr, nullptr);
+        if (n > 0) {
+            buffer[n] = '\0';
+        
+            // Expecting format "lat,lon" from Python
+            float lat, lon;
+            if (sscanf(buffer, "%f,%f", &lat, &lon) == 2) {
+                manager.updateUserLocation(lat, lon);
+            }
+            else {
+                // A helpful error print just in case the format changes again
+                std::cout << "\n[UDP Error] Failed to parse coordinates from: " << buffer << std::endl;
+            }
+        }
+    }
+    close(sockfd);
+}
+
+//////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////
+// Listen for D-Pad motor commands from Python via UDP
+void motorCommandListener() {
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) return;
+
+    // Set a timeout so the thread doesn't get stuck during shutdown
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    sockaddr_in servaddr{};
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+    servaddr.sin_port = htons(Config::UDP_MOTOR_PORT); // Listening on 5006
+
+    bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+
+    char buffer[1024];
+    while (g_running) {
+        int n = recvfrom(sockfd, buffer, 1023, 0, nullptr, nullptr);
+        if (n > 0) {
+            buffer[n] = '\0';
+            std::string command(buffer);
+            
+            // Print the command (using \n to not mess up the status bar)
+            std::cout << "\n[Motor Control] Command Received: " << command << std::endl;
+            
+            // ==========================================
+            // TODO: TRIGGER YOUR MOTOR HARDWARE HERE
+            // ==========================================
+            // if (command == "F") { /* move forward */ }
+            // else if (command == "B") { /* move backward */ }
+            // else if (command == "L") { /* turn left */ }
+            // else if (command == "R") { /* turn right */ }
+            // else if (command == "S") { /* stop motors */ }
+        }
+    }
+    close(sockfd);
+}
+//////////////////////////////////////////////////////////////
+
+
+
 
 // Socket publisher class for IPC with Python BLE server
 class SocketPublisher {
@@ -160,14 +250,16 @@ public:
         // Get binary data from sensor manager
         auto weightBytes = sensorManager_.getWeightDataBinary();
         auto eventsBytes = sensorManager_.getEventsDataBinary();
+        auto bearingBytes = sensorManager_.getBearingDataBinary();
         
         // Format: "W:<4 hex bytes>,E:<2 hex bytes>\n"
         // Example: "W:0000803F,E:0000\n" (weight as float bytes, events as uint16 bytes)
-        char buffer[64];
+        char buffer[128];
         snprintf(buffer, sizeof(buffer), 
-                 "W:%02X%02X%02X%02X,E:%02X%02X\n",
+                 "W:%02X%02X%02X%02X,E:%02X%02X,B:%02X%02X%02X%02X\n",
                  weightBytes[0], weightBytes[1], weightBytes[2], weightBytes[3],
-                 eventsBytes[0], eventsBytes[1]);
+                 eventsBytes[0], eventsBytes[1],
+                bearingBytes[0], bearingBytes[1], bearingBytes[2], bearingBytes[3]);
         
         // Send to Python BLE server
         ssize_t sent = send(clientFd_, buffer, strlen(buffer), MSG_NOSIGNAL);
@@ -232,9 +324,17 @@ int main(int argc, char* argv[]) {
     
     // Create sensor data manager
     SensorDataManager sensorManager;
+
+    sensorManager.updatePiLocation();
     
     // Create socket publisher
     SocketPublisher socketPublisher(sensorManager);
+
+    // 1. LAUNCH THE GPS THREAD HERE
+    std::thread gpsThread(gpsListener, std::ref(sensorManager));
+
+
+    std::thread motorThread(motorCommandListener);
     
     // Start socket server
     if (!socketPublisher.start()) {
@@ -291,6 +391,15 @@ int main(int argc, char* argv[]) {
     std::cout << "\n\n[Main] Shutting down..." << std::endl;
     sensorManager.stopDataGeneration();
     socketPublisher.stop();
+
+    if (gpsThread.joinable()) {
+        gpsThread.join();
+    }
+
+
+    if (motorThread.joinable()) {
+        motorThread.join();
+    }
     
     std::cout << "[Main] Goodbye!" << std::endl;
     return 0;

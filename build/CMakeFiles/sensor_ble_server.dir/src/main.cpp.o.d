@@ -239,6 +239,7 @@ CMakeFiles/sensor_ble_server.dir/src/main.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/statx-generic.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx_timestamp.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_statx.h \
+ /usr/include/netinet/in.h /usr/include/aarch64-linux-gnu/bits/in.h \
  /home/alberto27/Documents/sensor_ble_server/src/config.hpp \
  /home/alberto27/Documents/sensor_ble_server/src/sensor_data.hpp \
  /usr/include/c++/14/vector /usr/include/c++/14/bits/stl_uninitialized.h \

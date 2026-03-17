@@ -6,6 +6,9 @@
 #include <cmath>
 #include <random>
 #include <iostream>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 SensorDataManager::SensorDataManager()
     : running_(false), weightDirection_(1.0f) {
@@ -21,6 +24,10 @@ SensorDataManager::SensorDataManager()
         Config::EVENT_NONE,  // no events
         0                    // timestamp
     };
+    piLat_ = 30.62413f; 
+    piLon_ = -96.3437556f;
+    userLat_ = 0.0f;
+    userLon_ = 0.0f;
 }
 
 SensorDataManager::~SensorDataManager() {
@@ -172,4 +179,58 @@ void SensorDataManager::clearAllEvents() {
     std::lock_guard<std::mutex> lock(dataMutex_);
     eventsData_.eventBits = Config::EVENT_NONE;
     eventsData_.timestamp = getCurrentTimestamp();
+}
+
+// Update this function with your manual coordinates until the GPS arrives
+void SensorDataManager::updatePiLocation() {
+    std::lock_guard<std::mutex> lock(dataMutex_);
+    
+    // EDIT THESE VALUES MANUALLY FOR NOW
+    piLat_ = 51.5074f; 
+    piLon_ = -0.1278f;
+}
+
+// This function will be called whenever the Bluetooth script receives new phone data
+void SensorDataManager::updateUserLocation(float phoneLat, float phoneLon) {
+    std::lock_guard<std::mutex> lock(dataMutex_);
+    
+    userLat_ = phoneLat;
+    userLon_ = phoneLon;
+
+    // Calculate the bearing (angle) from Pi to User
+    // Formula: atan2(sin(Δλ) * cos(φ2), cos(φ1) * sin(φ2) - sin(φ1) * cos(φ2) * cos(Δλ))
+    
+    double lat1 = piLat_ * M_PI / 180.0;
+    double lat2 = userLat_ * M_PI / 180.0;
+    double dLon = (userLon_ - piLon_) * M_PI / 180.0;
+
+    double y = std::sin(dLon) * std::cos(lat2);
+    double x = std::cos(lat1) * std::sin(lat2) -
+               std::sin(lat1) * std::cos(lat2) * std::cos(dLon);
+    
+    double bearing = std::atan2(y, x);
+
+    bearingToUser_ = static_cast<float>(std::fmod((bearing * 180.0 / M_PI) + 360.0, 360.0));
+    
+    // Convert radians to degrees and normalize to 0-360
+    //float angle = static_cast<float>(std::fmod((bearing * 180.0 / M_PI) + 360.0, 360.0));
+    
+    std::cout << "\n[Algorithm] Angle to User: " << bearingToUser_ << " degrees" << std::endl;
+    
+    // You can now use 'angle' to point a motor or log it
+}
+
+std::vector<uint8_t> SensorDataManager::getBearingDataBinary() {
+    std::lock_guard<std::mutex> lock(dataMutex_);
+    
+    // Calculate current bearing (or use a stored member variable)
+    // We'll pack it as a 4-byte float for your Flutter/Mobile app
+    std::vector<uint8_t> data(4);
+    
+    // Logic: you might want to store the result of the calculation 
+    // in a member variable like 'lastCalculatedBearing_'
+    //float bearing = /* the result from your updateUserLocation logic */;
+    
+    std::memcpy(data.data(), &bearingToUser_, sizeof(float));
+    return data;
 }

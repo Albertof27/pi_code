@@ -17,6 +17,7 @@ CMakeFiles/sensor_ble_server.dir/src/main.cpp.o
  /usr/include/aarch64-linux-gnu/bits/floatn.h
  /usr/include/aarch64-linux-gnu/bits/getopt_core.h
  /usr/include/aarch64-linux-gnu/bits/getopt_posix.h
+ /usr/include/aarch64-linux-gnu/bits/in.h
  /usr/include/aarch64-linux-gnu/bits/libc-header-start.h
  /usr/include/aarch64-linux-gnu/bits/locale.h
  /usr/include/aarch64-linux-gnu/bits/long-double.h
@@ -281,6 +282,7 @@ CMakeFiles/sensor_ble_server.dir/src/main.cpp.o
  /usr/include/linux/stddef.h
  /usr/include/linux/types.h
  /usr/include/locale.h
+ /usr/include/netinet/in.h
  /usr/include/pthread.h
  /usr/include/sched.h
  /usr/include/signal.h
